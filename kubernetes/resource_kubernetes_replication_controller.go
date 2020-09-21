@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -128,7 +129,7 @@ func resourceKubernetesReplicationControllerCreate(d *schema.ResourceData, meta 
 	}
 
 	log.Printf("[INFO] Creating new replication controller: %#v", rc)
-	out, err := conn.CoreV1().ReplicationControllers(metadata.Namespace).Create(&rc)
+	out, err := conn.CoreV1().ReplicationControllers(metadata.Namespace).Create(context.Background(), &rc, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to create replication controller: %s", err)
 	}
@@ -164,7 +165,7 @@ func resourceKubernetesReplicationControllerRead(d *schema.ResourceData, meta in
 	}
 
 	log.Printf("[INFO] Reading replication controller %s", name)
-	rc, err := conn.CoreV1().ReplicationControllers(namespace).Get(name, metav1.GetOptions{})
+	rc, err := conn.CoreV1().ReplicationControllers(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -218,7 +219,7 @@ func resourceKubernetesReplicationControllerUpdate(d *schema.ResourceData, meta 
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating replication controller %q: %v", name, string(data))
-	out, err := conn.CoreV1().ReplicationControllers(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().ReplicationControllers(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update replication controller: %s", err)
 	}
@@ -256,7 +257,7 @@ func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta 
 	if err != nil {
 		return err
 	}
-	_, err = conn.CoreV1().ReplicationControllers(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	_, err = conn.CoreV1().ReplicationControllers(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}
@@ -268,7 +269,7 @@ func resourceKubernetesReplicationControllerDelete(d *schema.ResourceData, meta 
 		return err
 	}
 
-	err = conn.CoreV1().ReplicationControllers(namespace).Delete(name, &deleteOptions)
+	err = conn.CoreV1().ReplicationControllers(namespace).Delete(context.Background(), name, deleteOptions)
 	if err != nil {
 		return err
 	}
@@ -291,7 +292,7 @@ func resourceKubernetesReplicationControllerExists(d *schema.ResourceData, meta 
 	}
 
 	log.Printf("[INFO] Checking replication controller %s", name)
-	_, err = conn.CoreV1().ReplicationControllers(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.CoreV1().ReplicationControllers(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil
@@ -303,7 +304,7 @@ func resourceKubernetesReplicationControllerExists(d *schema.ResourceData, meta 
 
 func waitForDesiredReplicasFunc(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
-		rc, err := conn.CoreV1().ReplicationControllers(ns).Get(name, metav1.GetOptions{})
+		rc, err := conn.CoreV1().ReplicationControllers(ns).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}

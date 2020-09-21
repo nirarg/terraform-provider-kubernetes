@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"log"
@@ -32,7 +33,7 @@ func dataSourceKubernetesAllNamespacesRead(d *schema.ResourceData, meta interfac
 	}
 
 	log.Printf("[INFO] Listing namespaces")
-	nsRaw, err := conn.CoreV1().Namespaces().List(metav1.ListOptions{})
+	nsRaw, err := conn.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err

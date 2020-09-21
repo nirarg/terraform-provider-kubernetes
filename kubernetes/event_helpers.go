@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sort"
@@ -22,7 +23,7 @@ func getLastWarningsForObject(conn *kubernetes.Clientset, metadata meta_v1.Objec
 
 	fs := fields.Set(m).String()
 	log.Printf("[DEBUG] Looking up events via this selector: %q", fs)
-	out, err := conn.CoreV1().Events(metadata.Namespace).List(meta_v1.ListOptions{
+	out, err := conn.CoreV1().Events(metadata.Namespace).List(context.Background(), meta_v1.ListOptions{
 		FieldSelector: fs,
 	})
 	if err != nil {

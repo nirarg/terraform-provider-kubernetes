@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -28,7 +29,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Create(d *schema.ResourceData, m
 		Spec:       *spec,
 	}
 	log.Printf("[INFO] Creating new horizontal pod autoscaler: %#v", hpa)
-	out, err := conn.AutoscalingV2beta2().HorizontalPodAutoscalers(metadata.Namespace).Create(&hpa)
+	out, err := conn.AutoscalingV2beta2().HorizontalPodAutoscalers(metadata.Namespace).Create(context.Background(), &hpa, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -50,7 +51,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Read(d *schema.ResourceData, met
 		return err
 	}
 	log.Printf("[INFO] Reading horizontal pod autoscaler %s", name)
-	hpa, err := conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(name, metav1.GetOptions{})
+	hpa, err := conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -92,7 +93,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Update(d *schema.ResourceData, m
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating horizontal pod autoscaler %q: %v", name, string(data))
-	out, err := conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Patch(name, types.JSONPatchType, data)
+	out, err := conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Patch(context.Background(), name, types.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update horizontal pod autoscaler: %s", err)
 	}
@@ -113,7 +114,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Delete(d *schema.ResourceData, m
 		return err
 	}
 	log.Printf("[INFO] Deleting horizontal pod autoscaler: %#v", name)
-	err = conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Delete(name, &metav1.DeleteOptions{})
+	err = conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -136,7 +137,7 @@ func resourceKubernetesHorizontalPodAutoscalerV2Exists(d *schema.ResourceData, m
 	}
 
 	log.Printf("[INFO] Checking horizontal pod autoscaler %s", name)
-	_, err = conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -58,7 +59,7 @@ func resourceKubernetesSecretCreate(d *schema.ResourceData, meta interface{}) er
 	}
 
 	log.Printf("[INFO] Creating new secret: %#v", secret)
-	out, err := conn.CoreV1().Secrets(metadata.Namespace).Create(&secret)
+	out, err := conn.CoreV1().Secrets(metadata.Namespace).Create(context.Background(), &secret, meta_v1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func resourceKubernetesSecretRead(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	log.Printf("[INFO] Reading secret %s", name)
-	secret, err := conn.CoreV1().Secrets(namespace).Get(name, meta_v1.GetOptions{})
+	secret, err := conn.CoreV1().Secrets(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ func resourceKubernetesSecretUpdate(d *schema.ResourceData, meta interface{}) er
 	}
 
 	log.Printf("[INFO] Updating secret %q: %v", name, data)
-	out, err := conn.CoreV1().Secrets(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().Secrets(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, meta_v1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update secret: %s", err)
 	}
@@ -150,7 +151,7 @@ func resourceKubernetesSecretDelete(d *schema.ResourceData, meta interface{}) er
 	}
 
 	log.Printf("[INFO] Deleting secret: %q", name)
-	err = conn.CoreV1().Secrets(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().Secrets(namespace).Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -174,7 +175,7 @@ func resourceKubernetesSecretExists(d *schema.ResourceData, meta interface{}) (b
 	}
 
 	log.Printf("[INFO] Checking secret %s", name)
-	_, err = conn.CoreV1().Secrets(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().Secrets(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
@@ -135,7 +136,7 @@ func resourceKubernetesDaemonSetCreate(d *schema.ResourceData, meta interface{})
 
 	log.Printf("[INFO] Creating new daemonset: %#v", daemonset)
 
-	out, err := conn.AppsV1().DaemonSets(metadata.Namespace).Create(&daemonset)
+	out, err := conn.AppsV1().DaemonSets(metadata.Namespace).Create(context.Background(), &daemonset, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to create daemonset: %s", err)
 	}
@@ -177,7 +178,7 @@ func resourceKubernetesDaemonSetUpdate(d *schema.ResourceData, meta interface{})
 	}
 	log.Printf("[INFO] Updating daemonset: %q", name)
 
-	out, err := conn.AppsV1().DaemonSets(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.AppsV1().DaemonSets(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update daemonset: %s", err)
 	}
@@ -204,7 +205,7 @@ func resourceKubernetesDaemonSetRead(d *schema.ResourceData, meta interface{}) e
 	}
 
 	log.Printf("[INFO] Reading daemonset %s", name)
-	daemonset, err := conn.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
+	daemonset, err := conn.AppsV1().DaemonSets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			d.SetId("")
@@ -246,7 +247,7 @@ func resourceKubernetesDaemonSetDelete(d *schema.ResourceData, meta interface{})
 
 	log.Printf("[INFO] Deleting daemonset: %#v", name)
 
-	err = conn.AppsV1().DaemonSets(namespace).Delete(name, &deleteOptions)
+	err = conn.AppsV1().DaemonSets(namespace).Delete(context.Background(), name, deleteOptions)
 	if err != nil {
 		return err
 	}
@@ -268,7 +269,7 @@ func resourceKubernetesDaemonSetExists(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[INFO] Checking daemonset %s", name)
-	_, err = conn.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.AppsV1().DaemonSets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil
@@ -280,7 +281,7 @@ func resourceKubernetesDaemonSetExists(d *schema.ResourceData, meta interface{})
 
 func waitForDaemonSetReplicasFunc(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
-		daemonSet, err := conn.AppsV1().DaemonSets(ns).Get(name, metav1.GetOptions{})
+		daemonSet, err := conn.AppsV1().DaemonSets(ns).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}

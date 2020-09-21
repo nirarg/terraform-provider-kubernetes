@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	kubernetes "k8s.io/client-go/kubernetes"
@@ -87,7 +89,7 @@ func resourceKubernetesServiceAccountCreate(d *schema.ResourceData, meta interfa
 		Secrets:                      expandServiceAccountSecrets(d.Get("secret").(*schema.Set).List(), ""),
 	}
 	log.Printf("[INFO] Creating new service account: %#v", svcAcc)
-	out, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Create(&svcAcc)
+	out, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Create(context.Background(), &svcAcc, meta_v1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -132,7 +134,7 @@ func resourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interface
 	}
 
 	log.Printf("[INFO] Reading service account %s", name)
-	svcAcc, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
+	svcAcc, err := conn.CoreV1().ServiceAccounts(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -205,7 +207,7 @@ func resourceKubernetesServiceAccountUpdate(d *schema.ResourceData, meta interfa
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating service account %q: %v", name, string(data))
-	out, err := conn.CoreV1().ServiceAccounts(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().ServiceAccounts(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, meta_v1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update service account: %s", err)
 	}
@@ -227,7 +229,7 @@ func resourceKubernetesServiceAccountDelete(d *schema.ResourceData, meta interfa
 	}
 
 	log.Printf("[INFO] Deleting service account: %#v", name)
-	err = conn.CoreV1().ServiceAccounts(namespace).Delete(name, &metav1.DeleteOptions{})
+	err = conn.CoreV1().ServiceAccounts(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -250,7 +252,7 @@ func resourceKubernetesServiceAccountExists(d *schema.ResourceData, meta interfa
 	}
 
 	log.Printf("[INFO] Checking service account %s", name)
-	_, err = conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.CoreV1().ServiceAccounts(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil
@@ -271,7 +273,7 @@ func resourceKubernetesServiceAccountImportState(d *schema.ResourceData, meta in
 		return nil, fmt.Errorf("Unable to parse identifier %s: %s", d.Id(), err)
 	}
 
-	sa, err := conn.CoreV1().ServiceAccounts(namespace).Get(name, metav1.GetOptions{})
+	sa, err := conn.CoreV1().ServiceAccounts(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}
@@ -292,7 +294,7 @@ func resourceKubernetesServiceAccountImportState(d *schema.ResourceData, meta in
 func getServiceAccountDefaultSecret(name string, config api.ServiceAccount, timeout time.Duration, conn *kubernetes.Clientset) (*api.Secret, error) {
 	var svcAccTokens []api.Secret
 	err := resource.Retry(timeout, func() *resource.RetryError {
-		resp, err := conn.CoreV1().ServiceAccounts(config.Namespace).Get(name, metav1.GetOptions{})
+		resp, err := conn.CoreV1().ServiceAccounts(config.Namespace).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}
@@ -303,7 +305,7 @@ func getServiceAccountDefaultSecret(name string, config api.ServiceAccount, time
 		}
 
 		diff := diffObjectReferences(config.Secrets, resp.Secrets)
-		secretList, err := conn.CoreV1().Secrets(config.Namespace).List(metav1.ListOptions{
+		secretList, err := conn.CoreV1().Secrets(config.Namespace).List(context.Background(), metav1.ListOptions{
 			FieldSelector: fmt.Sprintf("type=%s", api.SecretTypeServiceAccountToken),
 		})
 		for _, secret := range secretList.Items {
@@ -347,7 +349,7 @@ func findDefaultServiceAccount(sa *api.ServiceAccount, conn *kubernetes.Clientse
 			continue
 		}
 
-		secret, err := conn.CoreV1().Secrets(sa.Namespace).Get(saSecret.Name, metav1.GetOptions{})
+		secret, err := conn.CoreV1().Secrets(sa.Namespace).Get(context.Background(), saSecret.Name, metav1.GetOptions{})
 		if err != nil {
 			return "", fmt.Errorf("Unable to fetch secret %s/%s from Kubernetes: %s", sa.Namespace, saSecret.Name, err)
 		}

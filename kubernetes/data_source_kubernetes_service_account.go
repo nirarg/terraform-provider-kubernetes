@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
@@ -61,7 +62,7 @@ func dataSourceKubernetesServiceAccountRead(d *schema.ResourceData, meta interfa
 	}
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
-	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(metadata.Name, metav1.GetOptions{})
+	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(context.Background(), metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
 	}

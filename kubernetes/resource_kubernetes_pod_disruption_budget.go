@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -8,6 +9,7 @@ import (
 	api "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -92,7 +94,7 @@ func resourceKubernetesPodDisruptionBudgetUpdate(d *schema.ResourceData, meta in
 	}
 
 	log.Printf("[INFO] Updating pod disruption budget %s: %s", d.Id(), ops)
-	out, err := conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}
@@ -120,7 +122,7 @@ func resourceKubernetesPodDisruptionBudgetCreate(d *schema.ResourceData, meta in
 	}
 
 	log.Printf("[INFO] Creating new pod disruption budget: %#v", pdb)
-	out, err := conn.PolicyV1beta1().PodDisruptionBudgets(metadata.Namespace).Create(&pdb)
+	out, err := conn.PolicyV1beta1().PodDisruptionBudgets(metadata.Namespace).Create(context.Background(), &pdb, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -143,7 +145,7 @@ func resourceKubernetesPodDisruptionBudgetRead(d *schema.ResourceData, meta inte
 	}
 
 	log.Printf("[INFO] Reading pod disruption budget %s", name)
-	pdb, err := conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(name, meta_v1.GetOptions{})
+	pdb, err := conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -175,7 +177,7 @@ func resourceKubernetesPodDisruptionBudgetDelete(d *schema.ResourceData, meta in
 	}
 
 	log.Printf("[INFO] Deleting pod disruption budget %#v", name)
-	err = conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -199,7 +201,7 @@ func resourceKubernetesPodDisruptionBudgetExists(d *schema.ResourceData, meta in
 	}
 
 	log.Printf("[INFO] Checking pod disruption budget %s", name)
-	_, err = conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

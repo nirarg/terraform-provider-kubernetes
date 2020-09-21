@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -194,7 +195,7 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 		Spec:       expandServiceSpec(d.Get("spec").([]interface{})),
 	}
 	log.Printf("[INFO] Creating new service: %#v", svc)
-	out, err := conn.CoreV1().Services(metadata.Namespace).Create(&svc)
+	out, err := conn.CoreV1().Services(metadata.Namespace).Create(context.Background(), &svc, meta_v1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -205,7 +206,7 @@ func resourceKubernetesServiceCreate(d *schema.ResourceData, meta interface{}) e
 		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
 
 		err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-			svc, err := conn.CoreV1().Services(out.Namespace).Get(out.Name, meta_v1.GetOptions{})
+			svc, err := conn.CoreV1().Services(out.Namespace).Get(context.Background(), out.Name, meta_v1.GetOptions{})
 			if err != nil {
 				log.Printf("[DEBUG] Received error: %#v", err)
 				return resource.NonRetryableError(err)
@@ -245,7 +246,7 @@ func resourceKubernetesServiceRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	log.Printf("[INFO] Reading service %s", name)
-	svc, err := conn.CoreV1().Services(namespace).Get(name, meta_v1.GetOptions{})
+	svc, err := conn.CoreV1().Services(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -299,7 +300,7 @@ func resourceKubernetesServiceUpdate(d *schema.ResourceData, meta interface{}) e
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating service %q: %v", name, string(data))
-	out, err := conn.CoreV1().Services(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().Services(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, meta_v1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update service: %s", err)
 	}
@@ -321,13 +322,13 @@ func resourceKubernetesServiceDelete(d *schema.ResourceData, meta interface{}) e
 	}
 
 	log.Printf("[INFO] Deleting service: %#v", name)
-	err = conn.CoreV1().Services(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().Services(namespace).Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
 
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		_, err := conn.CoreV1().Services(namespace).Get(name, meta_v1.GetOptions{})
+		_, err := conn.CoreV1().Services(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 				return nil
@@ -360,7 +361,7 @@ func resourceKubernetesServiceExists(d *schema.ResourceData, meta interface{}) (
 	}
 
 	log.Printf("[INFO] Checking service %s", name)
-	_, err = conn.CoreV1().Services(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().Services(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

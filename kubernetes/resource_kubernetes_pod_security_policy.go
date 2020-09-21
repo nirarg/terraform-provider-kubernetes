@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -8,6 +9,7 @@ import (
 	policy "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -382,7 +384,7 @@ func resourceKubernetesPodSecurityPolicyCreate(d *schema.ResourceData, meta inte
 	}
 
 	log.Printf("[INFO] Creating new PodSecurityPolicy: %#v", psp)
-	out, err := conn.PolicyV1beta1().PodSecurityPolicies().Create(psp)
+	out, err := conn.PolicyV1beta1().PodSecurityPolicies().Create(context.Background(), psp, metav1.CreateOptions{})
 
 	if err != nil {
 		return err
@@ -402,7 +404,7 @@ func resourceKubernetesPodSecurityPolicyRead(d *schema.ResourceData, meta interf
 	name := d.Id()
 
 	log.Printf("[INFO] Reading PodSecurityPolicy %s", name)
-	psp, err := conn.PolicyV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
+	psp, err := conn.PolicyV1beta1().PodSecurityPolicies().Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -446,7 +448,7 @@ func resourceKubernetesPodSecurityPolicyUpdate(d *schema.ResourceData, meta inte
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating PodSecurityPolicy %q: %v", name, string(data))
-	out, err := conn.PolicyV1beta1().PodSecurityPolicies().Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.PolicyV1beta1().PodSecurityPolicies().Patch(context.Background(), name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update PodSecurityPolicy: %s", err)
 	}
@@ -465,7 +467,7 @@ func resourceKubernetesPodSecurityPolicyDelete(d *schema.ResourceData, meta inte
 	name := d.Id()
 
 	log.Printf("[INFO] Deleting PodSecurityPolicy: %#v", name)
-	err = conn.PolicyV1beta1().PodSecurityPolicies().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.PolicyV1beta1().PodSecurityPolicies().Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -483,7 +485,7 @@ func resourceKubernetesPodSecurityPolicyExists(d *schema.ResourceData, meta inte
 	name := d.Id()
 
 	log.Printf("[INFO] Checking PodSecurityPolicy %s", name)
-	_, err = conn.PolicyV1beta1().PodSecurityPolicies().Get(name, meta_v1.GetOptions{})
+	_, err = conn.PolicyV1beta1().PodSecurityPolicies().Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

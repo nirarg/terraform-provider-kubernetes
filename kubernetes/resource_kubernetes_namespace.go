@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -10,6 +11,7 @@ import (
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -44,7 +46,7 @@ func resourceKubernetesNamespaceCreate(d *schema.ResourceData, meta interface{})
 		ObjectMeta: metadata,
 	}
 	log.Printf("[INFO] Creating new namespace: %#v", namespace)
-	out, err := conn.CoreV1().Namespaces().Create(&namespace)
+	out, err := conn.CoreV1().Namespaces().Create(context.Background(), &namespace, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -62,7 +64,7 @@ func resourceKubernetesNamespaceRead(d *schema.ResourceData, meta interface{}) e
 
 	name := d.Id()
 	log.Printf("[INFO] Reading namespace %s", name)
-	namespace, err := conn.CoreV1().Namespaces().Get(name, meta_v1.GetOptions{})
+	namespace, err := conn.CoreV1().Namespaces().Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -89,7 +91,7 @@ func resourceKubernetesNamespaceUpdate(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[INFO] Updating namespace: %s", ops)
-	out, err := conn.CoreV1().Namespaces().Patch(d.Id(), pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().Namespaces().Patch(context.Background(), d.Id(), pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}
@@ -107,7 +109,7 @@ func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{})
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting namespace: %#v", name)
-	err = conn.CoreV1().Namespaces().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().Namespaces().Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -117,7 +119,7 @@ func resourceKubernetesNamespaceDelete(d *schema.ResourceData, meta interface{})
 		Pending: []string{"Terminating"},
 		Timeout: d.Timeout(schema.TimeoutDelete),
 		Refresh: func() (interface{}, string, error) {
-			out, err := conn.CoreV1().Namespaces().Get(name, meta_v1.GetOptions{})
+			out, err := conn.CoreV1().Namespaces().Get(context.Background(), name, meta_v1.GetOptions{})
 			if err != nil {
 				if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 					return nil, "", nil
@@ -149,7 +151,7 @@ func resourceKubernetesNamespaceExists(d *schema.ResourceData, meta interface{})
 
 	name := d.Id()
 	log.Printf("[INFO] Checking namespace %s", name)
-	_, err = conn.CoreV1().Namespaces().Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().Namespaces().Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

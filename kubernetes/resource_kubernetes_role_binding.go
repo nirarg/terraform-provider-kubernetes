@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -60,7 +61,7 @@ func resourceKubernetesRoleBindingCreate(d *schema.ResourceData, meta interface{
 		Subjects:   expandRBACSubjects(d.Get("subject").([]interface{})),
 	}
 	log.Printf("[INFO] Creating new RoleBinding: %#v", binding)
-	out, err := conn.RbacV1().RoleBindings(metadata.Namespace).Create(binding)
+	out, err := conn.RbacV1().RoleBindings(metadata.Namespace).Create(context.Background(), binding, meta_v1.CreateOptions{})
 
 	if err != nil {
 		return err
@@ -83,7 +84,7 @@ func resourceKubernetesRoleBindingRead(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[INFO] Reading RoleBinding %s", name)
-	binding, err := conn.RbacV1().RoleBindings(namespace).Get(name, meta_v1.GetOptions{})
+	binding, err := conn.RbacV1().RoleBindings(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -133,7 +134,7 @@ func resourceKubernetesRoleBindingUpdate(d *schema.ResourceData, meta interface{
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating RoleBinding %q: %v", name, string(data))
-	out, err := conn.RbacV1().RoleBindings(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.RbacV1().RoleBindings(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, meta_v1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update RoleBinding: %s", err)
 	}
@@ -155,7 +156,7 @@ func resourceKubernetesRoleBindingDelete(d *schema.ResourceData, meta interface{
 	}
 
 	log.Printf("[INFO] Deleting RoleBinding: %#v", name)
-	err = conn.RbacV1().RoleBindings(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.RbacV1().RoleBindings(namespace).Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -176,7 +177,7 @@ func resourceKubernetesRoleBindingExists(d *schema.ResourceData, meta interface{
 	}
 
 	log.Printf("[INFO] Checking RoleBinding %s", name)
-	_, err = conn.RbacV1().RoleBindings(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.RbacV1().RoleBindings(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

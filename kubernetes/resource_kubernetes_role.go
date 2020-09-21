@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -79,7 +80,7 @@ func resourceKubernetesRoleCreate(d *schema.ResourceData, meta interface{}) erro
 		Rules:      *rules,
 	}
 	log.Printf("[INFO] Creating new role: %#v", role)
-	out, err := conn.RbacV1().Roles(metadata.Namespace).Create(&role)
+	out, err := conn.RbacV1().Roles(metadata.Namespace).Create(context.Background(), &role, meta_v1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -102,7 +103,7 @@ func resourceKubernetesRoleRead(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	log.Printf("[INFO] Reading role %s", name)
-	role, err := conn.RbacV1().Roles(namespace).Get(name, meta_v1.GetOptions{})
+	role, err := conn.RbacV1().Roles(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -148,7 +149,7 @@ func resourceKubernetesRoleUpdate(d *schema.ResourceData, meta interface{}) erro
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating role %q: %v", name, string(data))
-	out, err := conn.RbacV1().Roles(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.RbacV1().Roles(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, meta_v1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update role: %s", err)
 	}
@@ -170,7 +171,7 @@ func resourceKubernetesRoleDelete(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	log.Printf("[INFO] Deleting role: %#v", name)
-	err = conn.RbacV1().Roles(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.RbacV1().Roles(namespace).Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -192,7 +193,7 @@ func resourceKubernetesRoleExists(d *schema.ResourceData, meta interface{}) (boo
 	}
 
 	log.Printf("[INFO] Checking role %s", name)
-	_, err = conn.RbacV1().Roles(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.RbacV1().Roles(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil

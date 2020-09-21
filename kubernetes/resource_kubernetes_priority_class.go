@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -8,6 +9,7 @@ import (
 	api "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -65,7 +67,7 @@ func resourceKubernetesPriorityClassCreate(d *schema.ResourceData, meta interfac
 	}
 
 	log.Printf("[INFO] Creating new priority class: %#v", priorityClass)
-	out, err := conn.SchedulingV1().PriorityClasses().Create(&priorityClass)
+	out, err := conn.SchedulingV1().PriorityClasses().Create(context.Background(), &priorityClass, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to create priority class: %s", err)
 	}
@@ -84,7 +86,7 @@ func resourceKubernetesPriorityClassRead(d *schema.ResourceData, meta interface{
 	name := d.Id()
 
 	log.Printf("[INFO] Reading priority class %s", name)
-	priorityClass, err := conn.SchedulingV1().PriorityClasses().Get(name, meta_v1.GetOptions{})
+	priorityClass, err := conn.SchedulingV1().PriorityClasses().Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -145,7 +147,7 @@ func resourceKubernetesPriorityClassUpdate(d *schema.ResourceData, meta interfac
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating priority class %q: %v", name, string(data))
-	out, err := conn.SchedulingV1().PriorityClasses().Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.SchedulingV1().PriorityClasses().Patch(context.Background(), name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update priority class: %s", err)
 	}
@@ -164,7 +166,7 @@ func resourceKubernetesPriorityClassDelete(d *schema.ResourceData, meta interfac
 	name := d.Id()
 
 	log.Printf("[INFO] Deleting priority class: %#v", name)
-	err = conn.SchedulingV1().PriorityClasses().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.SchedulingV1().PriorityClasses().Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -184,7 +186,7 @@ func resourceKubernetesPriorityClassExists(d *schema.ResourceData, meta interfac
 	name := d.Id()
 
 	log.Printf("[INFO] Checking priority class %s", name)
-	_, err = conn.SchedulingV1().PriorityClasses().Get(name, meta_v1.GetOptions{})
+	_, err = conn.SchedulingV1().PriorityClasses().Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

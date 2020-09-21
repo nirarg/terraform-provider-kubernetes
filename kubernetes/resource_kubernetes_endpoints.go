@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -8,6 +9,7 @@ import (
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -47,7 +49,7 @@ func resourceKubernetesEndpointsCreate(d *schema.ResourceData, meta interface{})
 		Subsets:    expandEndpointsSubsets(d.Get("subset").(*schema.Set)),
 	}
 	log.Printf("[INFO] Creating new endpoints: %#v", ep)
-	out, err := conn.CoreV1().Endpoints(metadata.Namespace).Create(&ep)
+	out, err := conn.CoreV1().Endpoints(metadata.Namespace).Create(context.Background(), &ep, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to create endpoints because: %s", err)
 	}
@@ -69,7 +71,7 @@ func resourceKubernetesEndpointsRead(d *schema.ResourceData, meta interface{}) e
 	}
 
 	log.Printf("[INFO] Reading endpoints %s", name)
-	ep, err := conn.CoreV1().Endpoints(namespace).Get(name, meta_v1.GetOptions{})
+	ep, err := conn.CoreV1().Endpoints(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return fmt.Errorf("Failed to read endpoint because: %s", err)
@@ -114,7 +116,7 @@ func resourceKubernetesEndpointsUpdate(d *schema.ResourceData, meta interface{})
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating endpoints %q: %v", name, string(data))
-	out, err := conn.CoreV1().Endpoints(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().Endpoints(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update endpoints: %s", err)
 	}
@@ -135,7 +137,7 @@ func resourceKubernetesEndpointsDelete(d *schema.ResourceData, meta interface{})
 		return fmt.Errorf("Failed to delete endpoints because: %s", err)
 	}
 	log.Printf("[INFO] Deleting endpoints: %#v", name)
-	err = conn.CoreV1().Endpoints(namespace).Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().Endpoints(namespace).Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to delete endpoints because: %s", err)
 	}
@@ -157,7 +159,7 @@ func resourceKubernetesEndpointsExists(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[INFO] Checking endpoints %s", name)
-	_, err = conn.CoreV1().Endpoints(namespace).Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().Endpoints(namespace).Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

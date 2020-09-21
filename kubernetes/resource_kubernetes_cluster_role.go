@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -73,7 +74,7 @@ func resourceKubernetesClusterRoleCreate(d *schema.ResourceData, meta interface{
 	}
 
 	log.Printf("[INFO] Creating new cluster role: %#v", cRole)
-	out, err := conn.RbacV1().ClusterRoles().Create(&cRole)
+	out, err := conn.RbacV1().ClusterRoles().Create(context.Background(), &cRole, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -104,7 +105,7 @@ func resourceKubernetesClusterRoleUpdate(d *schema.ResourceData, meta interface{
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating ClusterRole %q: %v", name, string(data))
-	out, err := conn.RbacV1().ClusterRoles().Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.RbacV1().ClusterRoles().Patch(context.Background(), name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update ClusterRole: %s", err)
 	}
@@ -122,7 +123,7 @@ func resourceKubernetesClusterRoleRead(d *schema.ResourceData, meta interface{})
 
 	name := d.Id()
 	log.Printf("[INFO] Reading cluster role %s", name)
-	cRole, err := conn.RbacV1().ClusterRoles().Get(name, metav1.GetOptions{})
+	cRole, err := conn.RbacV1().ClusterRoles().Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			d.SetId("")
@@ -157,7 +158,7 @@ func resourceKubernetesClusterRoleDelete(d *schema.ResourceData, meta interface{
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting cluster role: %#v", name)
-	err = conn.RbacV1().ClusterRoles().Delete(name, &metav1.DeleteOptions{})
+	err = conn.RbacV1().ClusterRoles().Delete(context.Background(), name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -175,7 +176,7 @@ func resourceKubernetesClusterRoleExists(d *schema.ResourceData, meta interface{
 
 	name := d.Id()
 	log.Printf("[INFO] Checking cluster role %s", name)
-	_, err = conn.RbacV1().ClusterRoles().Get(name, metav1.GetOptions{})
+	_, err = conn.RbacV1().ClusterRoles().Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil

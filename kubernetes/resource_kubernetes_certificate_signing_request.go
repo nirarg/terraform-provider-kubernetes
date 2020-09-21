@@ -1,15 +1,18 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"k8s.io/api/certificates/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"log"
 	"reflect"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"k8s.io/api/certificates/v1beta1"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 func resourceKubernetesCertificateSigningRequest() *schema.Resource {
@@ -98,7 +101,7 @@ func resourceKubernetesCertificateSigningRequestCreate(d *schema.ResourceData, m
 		Spec:       *spec,
 	}
 	log.Printf("[INFO] Creating new certificate signing request: %#v", csr)
-	newCSR, createErr := conn.CertificatesV1beta1().CertificateSigningRequests().Create(&csr)
+	newCSR, createErr := conn.CertificatesV1beta1().CertificateSigningRequests().Create(context.Background(), &csr, meta_v1.CreateOptions{})
 	if createErr != nil {
 		return fmt.Errorf("Failed to create certificate signing request: %s", err)
 	}
@@ -107,11 +110,11 @@ func resourceKubernetesCertificateSigningRequestCreate(d *schema.ResourceData, m
 	csrName := newCSR.ObjectMeta.Name
 
 	// Delete the remote CSR resource when this function exits, or when errors are encountered.
-	defer conn.CertificatesV1beta1().CertificateSigningRequests().Delete(csrName, &metav1.DeleteOptions{})
+	defer conn.CertificatesV1beta1().CertificateSigningRequests().Delete(context.Background(), csrName, metav1.DeleteOptions{})
 
 	if d.Get("auto_approve").(bool) {
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			pendingCSR, getErr := conn.CertificatesV1beta1().CertificateSigningRequests().Get(csrName, metav1.GetOptions{})
+			pendingCSR, getErr := conn.CertificatesV1beta1().CertificateSigningRequests().Get(context.Background(), csrName, metav1.GetOptions{})
 			if getErr != nil {
 				return getErr
 			}
@@ -122,7 +125,7 @@ func resourceKubernetesCertificateSigningRequestCreate(d *schema.ResourceData, m
 			}
 			pendingCSR.Status.Certificate = []byte{}
 			pendingCSR.Status.Conditions = append(pendingCSR.Status.Conditions, approval)
-			_, updateErr := conn.CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(pendingCSR)
+			_, updateErr := conn.CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(context.Background(), pendingCSR, metav1.UpdateOptions{})
 			return updateErr
 		})
 		if retryErr != nil {
@@ -137,7 +140,7 @@ func resourceKubernetesCertificateSigningRequestCreate(d *schema.ResourceData, m
 		Pending: []string{"", "Approved"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {
-			out, refreshErr := conn.CertificatesV1beta1().CertificateSigningRequests().Get(csrName, metav1.GetOptions{})
+			out, refreshErr := conn.CertificatesV1beta1().CertificateSigningRequests().Get(context.Background(), csrName, metav1.GetOptions{})
 			if refreshErr != nil {
 				log.Printf("[ERROR] Received error: %v", refreshErr)
 				return out, "Error", refreshErr
@@ -177,7 +180,7 @@ func resourceKubernetesCertificateSigningRequestCreate(d *schema.ResourceData, m
 	}
 	log.Printf("[INFO] Certificate issued for request: %s", csrName)
 
-	issued, err := conn.CertificatesV1beta1().CertificateSigningRequests().Get(csrName, metav1.GetOptions{})
+	issued, err := conn.CertificatesV1beta1().CertificateSigningRequests().Get(context.Background(), csrName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

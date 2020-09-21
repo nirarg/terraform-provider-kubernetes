@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -8,6 +9,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 
@@ -136,10 +138,10 @@ func resourceKubernetesValidatingWebhookConfigurationCreate(d *schema.ResourceDa
 		requestv1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
 		responsev1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
 		copier.Copy(requestv1beta1, cfg)
-		responsev1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Create(requestv1beta1)
+		responsev1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Create(context.Background(), requestv1beta1, meta_v1.CreateOptions{})
 		copier.Copy(res, responsev1beta1)
 	} else {
-		res, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(&cfg)
+		res, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(context.Background(), &cfg, meta_v1.CreateOptions{})
 	}
 
 	if err != nil {
@@ -170,10 +172,10 @@ func resourceKubernetesValidatingWebhookConfigurationRead(d *schema.ResourceData
 	}
 	if useadmissionregistrationv1beta1 {
 		cfgv1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-		cfgv1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		cfgv1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(context.Background(), name, metav1.GetOptions{})
 		copier.Copy(cfg, cfgv1beta1)
 	} else {
-		cfg, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		cfg, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(context.Background(), name, metav1.GetOptions{})
 	}
 	if err != nil {
 		return err
@@ -240,10 +242,10 @@ func resourceKubernetesValidatingWebhookConfigurationUpdate(d *schema.ResourceDa
 	}
 	if useadmissionregistrationv1beta1 {
 		responsev1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-		responsev1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Patch(name, types.JSONPatchType, data)
+		responsev1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Patch(context.Background(), name, types.JSONPatchType, data, meta_v1.PatchOptions{})
 		copier.Copy(res, responsev1beta1)
 	} else {
-		res, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Patch(name, types.JSONPatchType, data)
+		res, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Patch(context.Background(), name, types.JSONPatchType, data, meta_v1.PatchOptions{})
 	}
 	if err != nil {
 		return fmt.Errorf("Failed to update ValidatingWebhookConfiguration: %s", err)
@@ -268,9 +270,9 @@ func resourceKubernetesValidatingWebhookConfigurationDelete(d *schema.ResourceDa
 		return err
 	}
 	if useadmissionregistrationv1beta1 {
-		err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(name, &metav1.DeleteOptions{})
+		err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(context.Background(), name, metav1.DeleteOptions{})
 	} else {
-		err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(name, &metav1.DeleteOptions{})
+		err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(context.Background(), name, metav1.DeleteOptions{})
 	}
 	if err != nil {
 		return err
@@ -297,9 +299,9 @@ func resourceKubernetesValidatingWebhookConfigurationExists(d *schema.ResourceDa
 		return false, err
 	}
 	if useadmissionregistrationv1beta1 {
-		_, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		_, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(context.Background(), name, metav1.GetOptions{})
 	} else {
-		_, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		_, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(context.Background(), name, metav1.GetOptions{})
 	}
 
 	if err != nil {

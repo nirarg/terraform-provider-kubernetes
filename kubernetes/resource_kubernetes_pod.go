@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -66,7 +67,7 @@ func resourceKubernetesPodCreate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	log.Printf("[INFO] Creating new pod: %#v", pod)
-	out, err := conn.CoreV1().Pods(metadata.Namespace).Create(&pod)
+	out, err := conn.CoreV1().Pods(metadata.Namespace).Create(context.Background(), &pod, metav1.CreateOptions{})
 
 	if err != nil {
 		return err
@@ -80,7 +81,7 @@ func resourceKubernetesPodCreate(d *schema.ResourceData, meta interface{}) error
 		Pending: []string{"Pending"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {
-			out, err := conn.CoreV1().Pods(metadata.Namespace).Get(metadata.Name, metav1.GetOptions{})
+			out, err := conn.CoreV1().Pods(metadata.Namespace).Get(context.Background(), metadata.Name, metav1.GetOptions{})
 			if err != nil {
 				log.Printf("[ERROR] Received error: %#v", err)
 				return out, "Error", err
@@ -130,7 +131,7 @@ func resourceKubernetesPodUpdate(d *schema.ResourceData, meta interface{}) error
 
 	log.Printf("[INFO] Updating pod %s: %s", d.Id(), ops)
 
-	out, err := conn.CoreV1().Pods(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().Pods(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}
@@ -152,7 +153,7 @@ func resourceKubernetesPodRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[INFO] Reading pod %s", name)
-	pod, err := conn.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+	pod, err := conn.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -189,13 +190,13 @@ func resourceKubernetesPodDelete(d *schema.ResourceData, meta interface{}) error
 	}
 
 	log.Printf("[INFO] Deleting pod: %#v", name)
-	err = conn.CoreV1().Pods(namespace).Delete(name, nil)
+	err = conn.CoreV1().Pods(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
 
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		out, err := conn.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+		out, err := conn.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 				return nil
@@ -229,7 +230,7 @@ func resourceKubernetesPodExists(d *schema.ResourceData, meta interface{}) (bool
 	}
 
 	log.Printf("[INFO] Checking pod %s", name)
-	_, err = conn.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

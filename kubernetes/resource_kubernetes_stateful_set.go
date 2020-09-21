@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -65,7 +67,7 @@ func resourceKubernetesStatefulSetCreate(d *schema.ResourceData, meta interface{
 	}
 	log.Printf("[INFO] Creating new StatefulSet: %#v", statefulSet)
 
-	out, err := conn.AppsV1().StatefulSets(metadata.Namespace).Create(&statefulSet)
+	out, err := conn.AppsV1().StatefulSets(metadata.Namespace).Create(context.Background(), &statefulSet, meta_v1.CreateOptions{})
 
 	if err != nil {
 		return err
@@ -100,7 +102,7 @@ func resourceKubernetesStatefulSetExists(d *schema.ResourceData, meta interface{
 	}
 
 	log.Printf("[INFO] Checking StatefulSet %s", name)
-	_, err = conn.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.AppsV1().StatefulSets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil
@@ -122,7 +124,7 @@ func resourceKubernetesStatefulSetRead(d *schema.ResourceData, meta interface{})
 		return fmt.Errorf("Error parsing resource ID: %#v", err)
 	}
 	log.Printf("[INFO] Reading stateful set %s", id)
-	statefulSet, err := conn.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
+	statefulSet, err := conn.AppsV1().StatefulSets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		switch {
 		case errors.IsNotFound(err):
@@ -174,7 +176,7 @@ func resourceKubernetesStatefulSetUpdate(d *schema.ResourceData, meta interface{
 		return fmt.Errorf("Failed to marshal update operations for StatefulSet: %s", err)
 	}
 	log.Printf("[INFO] Updating StatefulSet %q: %v", name, string(data))
-	out, err := conn.AppsV1().StatefulSets(namespace).Patch(name, types.JSONPatchType, data)
+	out, err := conn.AppsV1().StatefulSets(namespace).Patch(context.Background(), name, types.JSONPatchType, data, meta_v1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update StatefulSet: %s", err)
 	}
@@ -200,12 +202,12 @@ func resourceKubernetesStatefulSetDelete(d *schema.ResourceData, meta interface{
 		return fmt.Errorf("Error parsing resource ID: %#v", err)
 	}
 	log.Printf("[INFO] Deleting StatefulSet: %#v", name)
-	err = conn.AppsV1().StatefulSets(namespace).Delete(name, nil)
+	err = conn.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		out, err := conn.AppsV1().StatefulSets(namespace).Get(name, metav1.GetOptions{})
+		out, err := conn.AppsV1().StatefulSets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			switch {
 			case errors.IsNotFound(err):
@@ -231,7 +233,7 @@ func resourceKubernetesStatefulSetDelete(d *schema.ResourceData, meta interface{
 // retryUntilStatefulSetRolloutComplete checks if a given job finished its execution and is either in 'Complete' or 'Failed' state.
 func retryUntilStatefulSetRolloutComplete(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
-		res, err := conn.AppsV1().StatefulSets(ns).Get(name, metav1.GetOptions{})
+		res, err := conn.AppsV1().StatefulSets(ns).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}

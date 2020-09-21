@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -112,7 +113,7 @@ func resourceKubernetesAPIServiceCreate(d *schema.ResourceData, meta interface{}
 		Spec:       expandAPIServiceSpec(d.Get("spec").([]interface{})),
 	}
 	log.Printf("[INFO] Creating new API service: %#v", svc)
-	out, err := conn.ApiregistrationV1().APIServices().Create(&svc)
+	out, err := conn.ApiregistrationV1().APIServices().Create(context.Background(), &svc, meta_v1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -131,7 +132,7 @@ func resourceKubernetesAPIServiceRead(d *schema.ResourceData, meta interface{}) 
 	name := d.Id()
 
 	log.Printf("[INFO] Reading service %s", name)
-	svc, err := conn.ApiregistrationV1().APIServices().Get(name, meta_v1.GetOptions{})
+	svc, err := conn.ApiregistrationV1().APIServices().Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -172,7 +173,7 @@ func resourceKubernetesAPIServiceUpdate(d *schema.ResourceData, meta interface{}
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating service %q: %v", name, string(data))
-	out, err := conn.ApiregistrationV1().APIServices().Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.ApiregistrationV1().APIServices().Patch(context.Background(), name, pkgApi.JSONPatchType, data, meta_v1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update API service: %s", err)
 	}
@@ -191,7 +192,7 @@ func resourceKubernetesAPIServiceDelete(d *schema.ResourceData, meta interface{}
 	name := d.Id()
 
 	log.Printf("[INFO] Deleting API service: %#v", name)
-	err = conn.ApiregistrationV1().APIServices().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.ApiregistrationV1().APIServices().Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -211,7 +212,7 @@ func resourceKubernetesAPIServiceExists(d *schema.ResourceData, meta interface{}
 	name := d.Id()
 
 	log.Printf("[INFO] Checking API service %s", name)
-	_, err = conn.ApiregistrationV1().APIServices().Get(name, meta_v1.GetOptions{})
+	_, err = conn.ApiregistrationV1().APIServices().Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

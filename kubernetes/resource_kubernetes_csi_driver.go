@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -75,7 +76,7 @@ func resourceKubernetesCSIDriverCreate(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[INFO] Creating new CSIDriver: %#v", CSIDriver)
-	out, err := conn.StorageV1beta1().CSIDrivers().Create(&CSIDriver)
+	out, err := conn.StorageV1beta1().CSIDrivers().Create(context.Background(), &CSIDriver, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -93,7 +94,7 @@ func resourceKubernetesCSIDriverRead(d *schema.ResourceData, meta interface{}) e
 
 	name := d.Id()
 	log.Printf("[INFO] Reading CSIDriver %s", name)
-	CSIDriver, err := conn.StorageV1beta1().CSIDrivers().Get(name, metav1.GetOptions{})
+	CSIDriver, err := conn.StorageV1beta1().CSIDrivers().Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -137,7 +138,7 @@ func resourceKubernetesCSIDriverUpdate(d *schema.ResourceData, meta interface{})
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating CSIDriver %q: %v", name, string(data))
-	out, err := conn.StorageV1beta1().CSIDrivers().Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.StorageV1beta1().CSIDrivers().Patch(context.Background(), name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update CSIDriver: %s", err)
 	}
@@ -154,13 +155,13 @@ func resourceKubernetesCSIDriverDelete(d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[INFO] Deleting CSIDriver: %s", d.Id())
-	err = conn.StorageV1beta1().CSIDrivers().Delete(d.Id(), &deleteOptions)
+	err = conn.StorageV1beta1().CSIDrivers().Delete(context.Background(), d.Id(), deleteOptions)
 	if err != nil {
 		return err
 	}
 
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		_, err := conn.StorageV1beta1().CSIDrivers().Get(d.Id(), metav1.GetOptions{})
+		_, err := conn.StorageV1beta1().CSIDrivers().Get(context.Background(), d.Id(), metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 				return nil
@@ -189,7 +190,7 @@ func resourceKubernetesCSIDriverExists(d *schema.ResourceData, meta interface{})
 
 	name := d.Id()
 	log.Printf("[INFO] Checking CSIDriver %s", name)
-	_, err = conn.StorageV1beta1().CSIDrivers().Get(name, metav1.GetOptions{})
+	_, err = conn.StorageV1beta1().CSIDrivers().Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil

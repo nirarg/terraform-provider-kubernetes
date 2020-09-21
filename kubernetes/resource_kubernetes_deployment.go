@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
@@ -219,7 +220,7 @@ func resourceKubernetesDeploymentCreate(d *schema.ResourceData, meta interface{}
 	}
 
 	log.Printf("[INFO] Creating new deployment: %#v", deployment)
-	out, err := conn.AppsV1().Deployments(metadata.Namespace).Create(&deployment)
+	out, err := conn.AppsV1().Deployments(metadata.Namespace).Create(context.Background(), &deployment, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to create deployment: %s", err)
 	}
@@ -271,7 +272,7 @@ func resourceKubernetesDeploymentUpdate(d *schema.ResourceData, meta interface{}
 		return fmt.Errorf("Failed to marshal update operations: %s", err)
 	}
 	log.Printf("[INFO] Updating deployment %q: %v", name, string(data))
-	out, err := conn.AppsV1().Deployments(namespace).Patch(name, types.JSONPatchType, data)
+	out, err := conn.AppsV1().Deployments(namespace).Patch(context.Background(), name, types.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update deployment: %s", err)
 	}
@@ -301,7 +302,7 @@ func resourceKubernetesDeploymentRead(d *schema.ResourceData, meta interface{}) 
 	}
 
 	log.Printf("[INFO] Reading deployment %s", name)
-	deployment, err := conn.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+	deployment, err := conn.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -339,13 +340,13 @@ func resourceKubernetesDeploymentDelete(d *schema.ResourceData, meta interface{}
 
 	log.Printf("[INFO] Deleting deployment: %#v", name)
 
-	err = conn.AppsV1().Deployments(namespace).Delete(name, &deleteOptions)
+	err = conn.AppsV1().Deployments(namespace).Delete(context.Background(), name, deleteOptions)
 	if err != nil {
 		return err
 	}
 
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		_, err := conn.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+		_, err := conn.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 				return nil
@@ -378,7 +379,7 @@ func resourceKubernetesDeploymentExists(d *schema.ResourceData, meta interface{}
 	}
 
 	log.Printf("[INFO] Checking deployment %s", name)
-	_, err = conn.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil
@@ -403,7 +404,7 @@ func GetDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.Depl
 func waitForDeploymentReplicasFunc(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
 		// Query the deployment to get a status update.
-		dply, err := conn.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
+		dply, err := conn.AppsV1().Deployments(ns).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}

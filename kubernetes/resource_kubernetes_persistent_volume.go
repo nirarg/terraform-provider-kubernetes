@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -12,6 +13,7 @@ import (
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
@@ -192,7 +194,7 @@ func resourceKubernetesPersistentVolumeCreate(d *schema.ResourceData, meta inter
 	}
 
 	log.Printf("[INFO] Creating new persistent volume: %#v", volume)
-	out, err := conn.CoreV1().PersistentVolumes().Create(&volume)
+	out, err := conn.CoreV1().PersistentVolumes().Create(context.Background(), &volume, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -203,7 +205,7 @@ func resourceKubernetesPersistentVolumeCreate(d *schema.ResourceData, meta inter
 		Pending: []string{"Pending"},
 		Timeout: d.Timeout(schema.TimeoutCreate),
 		Refresh: func() (interface{}, string, error) {
-			out, err := conn.CoreV1().PersistentVolumes().Get(metadata.Name, meta_v1.GetOptions{})
+			out, err := conn.CoreV1().PersistentVolumes().Get(context.Background(), metadata.Name, meta_v1.GetOptions{})
 			if err != nil {
 				log.Printf("[ERROR] Received error: %#v", err)
 				return out, "Error", err
@@ -233,7 +235,7 @@ func resourceKubernetesPersistentVolumeRead(d *schema.ResourceData, meta interfa
 
 	name := d.Id()
 	log.Printf("[INFO] Reading persistent volume %s", name)
-	volume, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
+	volume, err := conn.CoreV1().PersistentVolumes().Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err
@@ -271,7 +273,7 @@ func resourceKubernetesPersistentVolumeUpdate(d *schema.ResourceData, meta inter
 	}
 
 	log.Printf("[INFO] Updating persistent volume %s: %s", d.Id(), ops)
-	out, err := conn.CoreV1().PersistentVolumes().Patch(d.Id(), pkgApi.JSONPatchType, data)
+	out, err := conn.CoreV1().PersistentVolumes().Patch(context.Background(), d.Id(), pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return err
 	}
@@ -289,13 +291,13 @@ func resourceKubernetesPersistentVolumeDelete(d *schema.ResourceData, meta inter
 
 	name := d.Id()
 	log.Printf("[INFO] Deleting persistent volume: %#v", name)
-	err = conn.CoreV1().PersistentVolumes().Delete(name, &meta_v1.DeleteOptions{})
+	err = conn.CoreV1().PersistentVolumes().Delete(context.Background(), name, meta_v1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
 
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		out, err := conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
+		out, err := conn.CoreV1().PersistentVolumes().Get(context.Background(), name, meta_v1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return nil
@@ -325,7 +327,7 @@ func resourceKubernetesPersistentVolumeExists(d *schema.ResourceData, meta inter
 
 	name := d.Id()
 	log.Printf("[INFO] Checking persistent volume %s", name)
-	_, err = conn.CoreV1().PersistentVolumes().Get(name, meta_v1.GetOptions{})
+	_, err = conn.CoreV1().PersistentVolumes().Get(context.Background(), name, meta_v1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil

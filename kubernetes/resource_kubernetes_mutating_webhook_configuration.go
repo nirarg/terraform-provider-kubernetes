@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -142,10 +143,10 @@ func resourceKubernetesMutatingWebhookConfigurationCreate(d *schema.ResourceData
 		requestv1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
 		responsev1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
 		copier.Copy(requestv1beta1, cfg)
-		responsev1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Create(requestv1beta1)
+		responsev1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Create(context.Background(), requestv1beta1, metav1.CreateOptions{})
 		copier.Copy(res, responsev1beta1)
 	} else {
-		res, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Create(&cfg)
+		res, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Create(context.Background(), &cfg, metav1.CreateOptions{})
 	}
 
 	if err != nil {
@@ -176,10 +177,10 @@ func resourceKubernetesMutatingWebhookConfigurationRead(d *schema.ResourceData, 
 	}
 	if useadmissionregistrationv1beta1 {
 		cfgv1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-		cfgv1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		cfgv1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(context.Background(), name, metav1.GetOptions{})
 		copier.Copy(cfg, cfgv1beta1)
 	} else {
-		cfg, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		cfg, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(context.Background(), name, metav1.GetOptions{})
 	}
 	if err != nil {
 		return err
@@ -246,10 +247,10 @@ func resourceKubernetesMutatingWebhookConfigurationUpdate(d *schema.ResourceData
 	}
 	if useadmissionregistrationv1beta1 {
 		responsev1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-		responsev1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Patch(name, types.JSONPatchType, data)
+		responsev1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Patch(context.Background(), name, types.JSONPatchType, data, metav1.PatchOptions{})
 		copier.Copy(res, responsev1beta1)
 	} else {
-		res, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Patch(name, types.JSONPatchType, data)
+		res, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Patch(context.Background(), name, types.JSONPatchType, data, metav1.PatchOptions{})
 	}
 	if err != nil {
 		return fmt.Errorf("Failed to update MutatingWebhookConfiguration: %s", err)
@@ -274,9 +275,9 @@ func resourceKubernetesMutatingWebhookConfigurationDelete(d *schema.ResourceData
 		return err
 	}
 	if useadmissionregistrationv1beta1 {
-		err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Delete(name, &metav1.DeleteOptions{})
+		err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Delete(context.Background(), name, metav1.DeleteOptions{})
 	} else {
-		err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(name, &metav1.DeleteOptions{})
+		err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(context.Background(), name, metav1.DeleteOptions{})
 	}
 	if err != nil {
 		return err
@@ -303,9 +304,9 @@ func resourceKubernetesMutatingWebhookConfigurationExists(d *schema.ResourceData
 		return false, err
 	}
 	if useadmissionregistrationv1beta1 {
-		_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		_, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(context.Background(), name, metav1.GetOptions{})
 	} else {
-		_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+		_, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(context.Background(), name, metav1.GetOptions{})
 	}
 
 	if err != nil {

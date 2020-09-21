@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -51,7 +52,7 @@ func dataSourceKubernetesPodRead(d *schema.ResourceData, meta interface{}) error
 	}
 
 	log.Printf("[INFO] Reading pod %s", metadata.Name)
-	pod, err := conn.CoreV1().Pods(metadata.Namespace).Get(metadata.Name, meta_v1.GetOptions{})
+	pod, err := conn.CoreV1().Pods(metadata.Namespace).Get(context.Background(), metadata.Name, meta_v1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return err

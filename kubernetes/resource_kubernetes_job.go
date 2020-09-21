@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -71,7 +72,7 @@ func resourceKubernetesJobCreate(d *schema.ResourceData, meta interface{}) error
 
 	log.Printf("[INFO] Creating new Job: %#v", job)
 
-	out, err := conn.BatchV1().Jobs(metadata.Namespace).Create(&job)
+	out, err := conn.BatchV1().Jobs(metadata.Namespace).Create(context.Background(), &job, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to create Job! API error: %s", err)
 	}
@@ -111,7 +112,7 @@ func resourceKubernetesJobUpdate(d *schema.ResourceData, meta interface{}) error
 
 	log.Printf("[INFO] Updating job %s: %#v", d.Id(), ops)
 
-	out, err := conn.BatchV1().Jobs(namespace).Patch(name, pkgApi.JSONPatchType, data)
+	out, err := conn.BatchV1().Jobs(namespace).Patch(context.Background(), name, pkgApi.JSONPatchType, data, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to update Job! API error: %s", err)
 	}
@@ -138,7 +139,7 @@ func resourceKubernetesJobRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[INFO] Reading job %s", name)
-	job, err := conn.BatchV1().Jobs(namespace).Get(name, metav1.GetOptions{})
+	job, err := conn.BatchV1().Jobs(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return fmt.Errorf("Failed to read Job! API error: %s", err)
@@ -189,13 +190,13 @@ func resourceKubernetesJobDelete(d *schema.ResourceData, meta interface{}) error
 	}
 
 	log.Printf("[INFO] Deleting job: %#v", name)
-	err = conn.BatchV1().Jobs(namespace).Delete(name, &deleteOptions)
+	err = conn.BatchV1().Jobs(namespace).Delete(context.Background(), name, deleteOptions)
 	if err != nil {
 		return fmt.Errorf("Failed to delete Job! API error: %s", err)
 	}
 
 	err = resource.Retry(d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
-		_, err := conn.BatchV1().Jobs(namespace).Get(name, metav1.GetOptions{})
+		_, err := conn.BatchV1().Jobs(namespace).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 				return nil
@@ -228,7 +229,7 @@ func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool
 	}
 
 	log.Printf("[INFO] Checking job %s", name)
-	_, err = conn.BatchV1().Jobs(namespace).Get(name, metav1.GetOptions{})
+	_, err = conn.BatchV1().Jobs(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil
@@ -241,7 +242,7 @@ func resourceKubernetesJobExists(d *schema.ResourceData, meta interface{}) (bool
 // retryUntilJobIsFinished checks if a give job finished its execution and either in Complete or Failed state
 func retryUntilJobIsFinished(conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
 	return func() *resource.RetryError {
-		job, err := conn.BatchV1().Jobs(ns).Get(name, metav1.GetOptions{})
+		job, err := conn.BatchV1().Jobs(ns).Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			return resource.NonRetryableError(err)
 		}
