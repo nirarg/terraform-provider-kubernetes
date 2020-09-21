@@ -7,7 +7,6 @@ require (
 	github.com/bflad/tfproviderlint v0.5.0
 	github.com/client9/misspell v0.3.4
 	github.com/frankban/quicktest v1.4.2 // indirect
-	github.com/gogo/protobuf v1.3.0 // indirect
 	github.com/golangci/golangci-lint v1.20.0
 	github.com/google/go-cmp v0.3.1
 	github.com/googleapis/gnostic v0.2.0 // indirect
@@ -29,11 +28,11 @@ require (
 	github.com/terraform-providers/terraform-provider-random v1.3.2-0.20190925210718-83518d96ae4f // indirect
 	github.com/ulikunitz/xz v0.5.6 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	k8s.io/api v0.16.12
-	k8s.io/apimachinery v0.16.12
+	k8s.io/api v0.18.0
+	k8s.io/apimachinery v0.18.0
 	k8s.io/client-go v10.0.0+incompatible
-	k8s.io/kube-aggregator v0.0.0-20191025230902-aa872b06629d
-	k8s.io/kubectl v0.16.12
+	k8s.io/kube-aggregator v0.18.0
+	k8s.io/kubectl v0.18.0
 )
 
 // Override invalid go-autorest pseudo-version. This can be removed once
@@ -42,7 +41,7 @@ require (
 // and https://github.com/Azure/go-autorest/issues/481
 replace (
 	github.com/Azure/go-autorest v11.1.2+incompatible => github.com/Azure/go-autorest v12.1.0+incompatible
-	k8s.io/client-go => k8s.io/client-go v0.0.0-20190918160344-1fbdaa4c8d90
+	k8s.io/client-go => k8s.io/client-go v0.18.0
 )
 
 go 1.14
